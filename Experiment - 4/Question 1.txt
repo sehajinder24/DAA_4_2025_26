@@ -1,0 +1,2 @@
+The time complexity of insertion and deletion in a Min Heap or Max Heap is O(log n) because, in the worst case, an element may need to traverse the height of the heap, which is log n. 
+However, if the element is already closer to its correct position, fewer comparisons are required and the actual time taken can be less than log n.
