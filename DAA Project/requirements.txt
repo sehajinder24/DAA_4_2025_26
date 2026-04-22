@@ -1,0 +1,19 @@
+to run the python you basically need the following.
+these libraries are not for code but only to connect python output to JS.
+
+pip install flask
+pip install flask-cors
+
+
+
+the server.py will run the server and also house the code that index.html will be using
+
+the three algorithms will compete in a race to see who can get out of the maze ,
+not the quickest , but using the least number of steps
+basically each cell = one step 
+
+our three algorithms are BFS , DFS and Backtracking , sadly A* could not be added
+
+
+automatically make your maze 
+and see who's the best algo for maze hunting
