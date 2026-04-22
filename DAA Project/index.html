@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maze Solver — Algorithm Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+	--bg:        #0b0b0f;    
+    --surface:  #16161d;
+    --border:   #2a2a36;
+    --accent:   #7c6cff;
+    --accent2:  #ff6c8a;
+    --text:     #e8e6f0;
+    --muted:    #6b697a;
+    --mono:     'Space Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+	--c-wall:    #1a1a24;    
+	--c-passage: #ffffff;    
+    --c-start:      #2ecc8e;
+    --c-exit:       #ff6c8a;
+    --c-visited:    #2a2a4a;
+    --c-frontier:   #5a4aff;
+    --c-backtrack:  #c8a030;
+    --c-path:       #3d2060;
+    --c-path-final: #b06aff;
+  }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 1.4rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  header h1 {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  header h1 span { color: var(--accent); }
+  .badge {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+.right-panel {
+  border-left: 1px solid var(--border);
+  padding: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  overflow-y: auto;
+  background: var(--bg);
+  }
+
+  aside {
+    border-right: 1px solid var(--border);
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.7rem;
+  }
+  .control-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .control-row label { font-size: 0.82rem; color: var(--text); }
+  .control-row .val  { font-family: var(--mono); font-size: 0.78rem; color: var(--accent); }
+
+  input[type=range] {
+    width: 100%;
+    appearance: none;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 0.9rem;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  .algo-list { display: flex; flex-direction: column; gap: 8px; }
+  .algo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.15s;
+    user-select: none;
+  }
+  .algo-item:hover { border-color: var(--accent); }
+  .algo-item.active { border-color: var(--accent); background: rgba(124,108,255,0.08); }
+  .algo-item input { display: none; }
+  .algo-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .algo-label { font-size: 0.83rem; font-weight: 500; flex: 1; }
+  .algo-tag {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+
+  .btn-row { display: flex; flex-direction: column; gap: 8px; }
+  button {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  button.primary:hover { background: #6a5cee; }
+  button.secondary { background: transparent; color: var(--text); }
+  button.secondary:hover { background: var(--surface); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .speed-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-top: -6px;
+    margin-bottom: 4px;
+  }
+
+  .stat-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .stat-card {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .stat-card .algo-name {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .stat-card .numbers {
+    display: flex;
+    gap: 12px;
+  }
+  .stat-card .num-item { flex: 1; }
+  .stat-card .num-val {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-card .num-lbl {
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  justify-content: flex-start;  /* 🔥 fix */
+    padding: 1.5rem;
+    position: relative;
+  }
+
+  .status-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-dot.active { background: var(--accent); animation: pulse 1s infinite; }
+  .status-dot.done   { background: var(--c-start); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  canvas {
+  width: 400px;
+  height: 400px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    image-rendering: pixelated;
+    max-width: 100%;
+    max-height: calc(100vh - 160px);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  #errorBanner {
+    display: none;
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #3d1010;
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-family: var(--mono);
+    z-index: 99;
+    max-width: 480px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Maze<span>Solver</span></h1>
+  <div class="badge">DAA Project</div>
+  <div>System Status: </div>
+  <div class="badge" id="serverStatus">● connecting…</div>
+</header>
+
+<div class="layout">
+  <aside>
+
+    <div>
+      <div class="section-label">Maze settings</div>
+      <div class="control-row">
+        <label>Grid size</label>
+        <span class="val" id="sizeVal">15 × 15</span>
+      </div>
+      <input type="range" id="sizeSlider" min="5" max="39" value="15" step="2">
+
+      <div class="control-row">
+        <label>Anim speed</label>
+        <span class="val" id="speedVal">Medium</span>
+      </div>
+      <input type="range" id="speedSlider" min="1" max="5" value="3" step="1">
+      <div class="speed-labels"><span>Slow</span><span>Fast</span></div>
+    </div>
+
+    <div>
+      <div class="section-label">Algorithms</div>
+      <div class="algo-list">
+        <label class="algo-item active" id="lbl-bfs">
+          <input type="checkbox" id="cb-bfs" checked>
+          <div class="algo-dot" style="background:#5a4aff"></div>
+          <span class="algo-label">BFS</span>
+          <span class="algo-tag">SHORTEST</span>
+        </label>
+        <label class="algo-item active" id="lbl-dfs">
+          <input type="checkbox" id="cb-dfs" checked>
+          <div class="algo-dot" style="background:#ff6c8a"></div>
+          <span class="algo-label">DFS</span>
+          <span class="algo-tag">DEEP DIVE</span>
+        </label>
+        <label class="algo-item active" id="lbl-bt">
+          <input type="checkbox" id="cb-bt" checked>
+          <div class="algo-dot" style="background:#c8a030"></div>
+          <span class="algo-label">Backtracking</span>
+          <span class="algo-tag">RETREAT</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" id="genBtn">Generate Maze</button>
+      <button class="secondary" id="solveBtn" disabled>▶  Solve with Python</button>
+      <button class="secondary" id="resetBtn" disabled>Reset view</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting to Python server…</span>
+    </div>
+    <canvas id="mazeCanvas"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#2ecc8e"></div>Maze Start</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6c8a"></div>Maze Exit</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2a2a4a"></div>Visited Cell</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c8a030"></div>Backtracked Cell</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#b06aff"></div>Solution Path</div>
+    </div>
+  </main>
+
+
+<aside class = "right-panel">
+    <div>
+      <div class="section-label">Results</div>
+      <div class="stat-cards">
+        <div class="stat-card" id="sc-bfs">
+          <div class="algo-name" style="color:#5a4aff">BFS</div>
+          <div class="numbers">
+            <div class="num-item"><div class="num-val" id="bfs-steps">—</div><div class="num-lbl">cells visited</div></div>
+            <div class="num-item"><div class="num-val" id="bfs-path">—</div><div class="num-lbl">path length</div></div>
+            <div class="num-item"><div class="num-val" id="bfs-time">—</div><div class="num-lbl">py time (ms)</div></div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-dfs">
+          <div class="algo-name" style="color:#ff6c8a">DFS</div>
+          <div class="numbers">
+            <div class="num-item"><div class="num-val" id="dfs-steps">—</div><div class="num-lbl">cells visited</div></div>
+            <div class="num-item"><div class="num-val" id="dfs-path">—</div><div class="num-lbl">path length</div></div>
+            <div class="num-item"><div class="num-val" id="dfs-time">—</div><div class="num-lbl">py time (ms)</div></div>
+          </div>
+        </div>
+        <div class="stat-card" id="sc-bt">
+          <div class="algo-name" style="color:#c8a030">Backtracking</div>
+          <div class="numbers">
+            <div class="num-item"><div class="num-val" id="bt-steps">—</div><div class="num-lbl">cells visited</div></div>
+            <div class="num-item"><div class="num-val" id="bt-path">—</div><div class="num-lbl">path length</div></div>
+            <div class="num-item"><div class="num-val" id="bt-time">—</div><div class="num-lbl">py time (ms)</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+</aside>
+
+</div>
+
+
+<div id="errorBanner"></div>
+
+<script>
+const API = 'http://localhost:5000';
+const canvas = document.getElementById('mazeCanvas');
+const ctx    = canvas.getContext('2d');
+const speedLabels = ['','Slowest','Slow','Medium','Fast','Fastest'];
+const speedDelays = [0, 120, 50, 18, 5, 0];
+
+let mazeData   = null;   
+let animHandle = null;
+let solving    = false;
+
+const C = {
+  wall:     '#0e0e12',
+  passage:  '#1e1e28',
+  start:    '#2ecc8e',
+  exit:     '#ff6c8a',
+  visited:  '#2a2a4a',
+  frontier: '#5a4aff',
+  backtrack:'#c8a030',
+  path:     '#3d2060',
+  final:    '#b06aff',
+};
+
+async function checkServer() {
+  try {
+    const r = await fetch(API + '/', { signal: AbortSignal.timeout(2000) });
+    if (r.ok) {
+      document.getElementById('serverStatus').textContent = '● server online';
+      document.getElementById('serverStatus').style.color = '#2ecc8e';
+      document.getElementById('statusDot').className = 'status-dot done';
+      document.getElementById('statusText').textContent = 'Python server connected. All Systems Online';
+      document.getElementById('genBtn').disabled = false;
+      return true;
+    }
+  } catch {}
+  document.getElementById('serverStatus').textContent = '● server offline';
+  document.getElementById('serverStatus').style.color = '#ff6c8a';
+  document.getElementById('statusDot').className = 'status-dot';
+  document.getElementById('statusText').textContent = 'Cannot reach Python server — run: python server.py';
+  showError('Python server not running. Open a terminal and run: python server.py');
+  return false;
+}
+
+function showError(msg) {
+  const b = document.getElementById('errorBanner');
+  b.textContent = msg;
+  b.style.display = 'block';
+  setTimeout(() => b.style.display = 'none', 5000);
+}
+
+function cellSize(n) { return Math.min(32, Math.floor(Math.min(window.innerWidth - 340, window.innerHeight - 180) / n)); }
+
+function drawBase(overlay) {
+  const { size: n, walls } = mazeData;
+  const cs = cellSize(n);
+  canvas.width  = n * cs;
+  canvas.height = n * cs;
+
+  const TOP=1,RIGHT=2,BOTTOM=4,LEFT=8;
+
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const x = c * cs, y = r * cs;
+      const state = overlay && overlay[r] && overlay[r][c];
+      let fill = C.passage;
+      if      (state === 'visited')   fill = C.visited;
+      else if (state === 'frontier')  fill = C.frontier;
+      else if (state === 'backtrack') fill = C.backtrack;
+      else if (state === 'path')      fill = C.path;
+      else if (state === 'final')     fill = C.final;
+      ctx.fillStyle = fill;
+      ctx.fillRect(x + 1, y + 1, cs - 1, cs - 1);
+    }
+  }
+
+
+  ctx.strokeStyle = '#0e0e12';
+  ctx.lineWidth   = 6.5;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const x = c * cs, y = r * cs;
+      const w = walls[r][c];
+      ctx.beginPath();
+      if (w & TOP)    { ctx.moveTo(x, y);      ctx.lineTo(x + cs, y); }
+      if (w & RIGHT)  { ctx.moveTo(x+cs, y);   ctx.lineTo(x+cs, y+cs); }
+      if (w & BOTTOM) { ctx.moveTo(x, y+cs);   ctx.lineTo(x+cs, y+cs); }
+      if (w & LEFT)   { ctx.moveTo(x, y);      ctx.lineTo(x, y+cs); }
+      ctx.stroke();
+    }
+  }
+  const fs = Math.max(8, cs * 0.38) | 0;
+  ctx.font = `bold ${fs}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = C.start;
+  ctx.fillRect(1, 1, cs - 1, cs - 1);
+  ctx.fillStyle = '#fff';
+  ctx.fillText('S', cs / 2, cs / 2);
+
+  const ex = (n-1)*cs, ey = (n-1)*cs;
+  ctx.fillStyle = C.exit;
+  ctx.fillRect(ex + 1, ey + 1, cs - 1, cs - 1);
+  ctx.fillStyle = '#fff';
+  ctx.fillText('E', ex + cs/2, ey + cs/2);
+}
+
+document.getElementById('sizeSlider').oninput = function () {
+  document.getElementById('sizeVal').textContent = `${this.value} × ${this.value}`;
+};
+document.getElementById('speedSlider').oninput = function () {
+  document.getElementById('speedVal').textContent = speedLabels[this.value];
+};
+['bfs','dfs','bt'].forEach(id => {
+  const cb  = document.getElementById('cb-' + id);
+  const lbl = document.getElementById('lbl-' + id);
+  cb.addEventListener('change', () => lbl.classList.toggle('active', cb.checked));
+});
+
+document.getElementById('genBtn').onclick = async function () {
+  if (animHandle) { clearTimeout(animHandle); animHandle = null; }
+  solving = false;
+  const n = +document.getElementById('sizeSlider').value;
+  setStatus('active', 'Generating maze in Python…');
+  this.disabled = true;
+  document.getElementById('solveBtn').disabled = true;
+
+  try {
+    const res  = await fetch(API + '/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ size: n }),
+    });
+    mazeData = await res.json();
+    drawBase(null);
+    resetStats();
+    setStatus('done', `${mazeData.size}×${mazeData.size} maze generated by Python. Click Solve!`);
+    document.getElementById('solveBtn').disabled = false;
+    document.getElementById('resetBtn').disabled = false;
+  } catch (e) {
+    showError('Failed to reach Python server. Is it running?');
+    setStatus('', 'Server error.');
+  }
+  this.disabled = false;
+};
+
+document.getElementById('solveBtn').onclick = async function () {
+  if (!mazeData || solving) return;
+  solving = true;
+  this.disabled = true;
+  document.getElementById('genBtn').disabled = true;
+  resetStats();
+
+  const algos = [];
+  if (document.getElementById('cb-bfs').checked)  algos.push('bfs');
+  if (document.getElementById('cb-dfs').checked)  algos.push('dfs');
+  if (document.getElementById('cb-bt').checked)   algos.push('backtracking');
+
+  if (!algos.length) {
+    showError('Select at least one algorithm.');
+    solving = false; this.disabled = false; document.getElementById('genBtn').disabled = false;
+    return;
+  }
+
+  setStatus('active', 'Sending maze to Python… running algorithms…');
+
+  try {
+    const res     = await fetch(API + '/solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ size: mazeData.size, walls: mazeData.walls, algorithms: algos }),
+    });
+    const results = await res.json();
+    animateResults(results, algos, 0);
+  } catch (e) {
+    showError('Solve request failed. Is the Python server running?');
+    solving = false;
+    this.disabled = false;
+    document.getElementById('genBtn').disabled = false;
+  }
+};
+
+function animateResults(results, algos, idx) {
+  if (idx >= algos.length) {
+    setStatus('done', 'Simulation FINISHED!!');
+    solving = false;
+    document.getElementById('genBtn').disabled = false;
+    document.getElementById('solveBtn').disabled = false;
+    return;
+  }
+
+  const key    = algos[idx];
+  const data   = results[key];
+  if (!data) { animateResults(results, algos, idx + 1); return; }
+
+  const n      = mazeData.size;
+  const delay  = speedDelays[+document.getElementById('speedSlider').value];
+  const overlay = Array.from({ length: n }, () => Array(n).fill(null));
+  const algoLabel = { bfs: 'BFS', dfs: 'DFS', backtracking: 'Backtracking' }[key];
+
+  setStatus('active', `Animating ${algoLabel}…`);
+
+  const ids = { bfs: 'bfs', dfs: 'dfs', backtracking: 'bt' };
+  const pfx = ids[key];
+  document.getElementById(pfx + '-steps').textContent = data.steps;
+  document.getElementById(pfx + '-path').textContent  = data.path_length;
+  document.getElementById(pfx + '-time').textContent  = data.time_ms;
+
+  let fi = 0;
+  let frames;
+  if (key === 'backtracking') {
+    frames = data.frames;   
+  } else {
+    frames = data.visited_order.map(pos => ({ pos, action: 'enter' }));
+    if (data.path) data.path.forEach(pos => frames.push({ pos, action: 'solution' }));
+  }
+
+  function step() {
+    if (fi >= frames.length) {
+
+      animHandle = setTimeout(() => animateResults(results, algos, idx + 1), 600);
+      return;
+    }
+
+    const { pos, action } = frames[fi++];
+    const [r, c] = pos;
+
+    if (action === 'enter')    overlay[r][c] = 'visited';
+    if (action === 'backtrack') overlay[r][c] = 'backtrack';
+    if (action === 'solution') overlay[r][c] = 'final';
+    drawBase(overlay);
+
+    if (delay === 0) {
+      const CHUNK = 80;
+      let i = 0;
+      while (fi < frames.length && i++ < CHUNK) {
+        const f2 = frames[fi++];
+        const [r2,c2] = f2.pos;
+        if (f2.action==='enter')     overlay[r2][c2]='visited';
+        if (f2.action==='backtrack') overlay[r2][c2]='backtrack';
+        if (f2.action==='solution')  overlay[r2][c2]='final';
+      }
+      drawBase(overlay);
+      animHandle = setTimeout(step, 0);
+    } else {
+      animHandle = setTimeout(step, delay);
+    }
+  }
+  step();
+}
+
+document.getElementById('resetBtn').onclick = function () {
+  if (animHandle) { clearTimeout(animHandle); animHandle = null; }
+  solving = false;
+  if (mazeData) drawBase(null);
+  resetStats();
+  setStatus('done', 'Reset. Click Solve to run again.');
+  document.getElementById('solveBtn').disabled = false;
+  document.getElementById('genBtn').disabled   = false;
+};
+
+function resetStats() {
+  ['bfs','dfs','bt'].forEach(p => {
+    ['steps','path','time'].forEach(k => {
+      const el = document.getElementById(p + '-' + k);
+      if (el) el.textContent = '—';
+    });
+  });
+}
+
+function setStatus(type, msg) {
+  document.getElementById('statusDot').className = 'status-dot' + (type ? ' ' + type : '');
+  document.getElementById('statusText').textContent = msg;
+}
+
+document.getElementById('genBtn').disabled  = true;
+document.getElementById('solveBtn').disabled = true;
+document.getElementById('resetBtn').disabled = true;
+checkServer().then(ok => {
+  if (ok) document.getElementById('genBtn').disabled = false;
+});
+</script>
+</body>
+</html>
